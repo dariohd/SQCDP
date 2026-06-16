@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3A55A4;
+  --color-primary-hover: #304887;
+  --color-primary-dark: #0d2c5a;
+  --color-state-ok: #53c15e;
+  --color-state-attention: #ffe066;
+  --color-state-blocage: #ec5353;
+  --color-state-empty: #e0e0e0;
+  --color-day-work: #f0f0f0;
+  --color-day-weekend: #d0d0d0;
+  --color-day-holiday: #bbb;
+  --color-action-btn: #ffe066;
+  --color-action-btn-hover: #ffd633;
+  --color-delete: #ec5353;
+  --color-error: #e11d48;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height: 100vh;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3A55A4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #304887;
+}
+
+@keyframes spin-wheel {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(var(--spin-deg, 1800deg)); }
+}
+
+.wheel-spinning {
+  animation: spin-wheel var(--spin-duration, 4s) cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards;
+}

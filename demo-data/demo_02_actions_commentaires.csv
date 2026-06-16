@@ -1,0 +1,18 @@
+Type;Axe;Date;Champ1;Champ2;Champ3;Champ4;Statut
+Action;Sécurité;2026-06-10;Absence EPI zone expédition;Thomas Martin;2026-06-18;Sécurité;ouverte
+Action;Sécurité;2026-06-16;Signalisation sol glissant allée 3;Marie Dupont;2026-06-20;Sécurité;ouverte
+Action;Qualité;2026-06-12;Non-conformité dimension pièce B12;Sophie Bernard;2026-06-22;Qualité;ouverte
+Action;Qualité;2026-06-05;Écart contrôle visuel lot 2847;Lucas Petit;2026-06-14;Qualité;fermee
+Action;Coût;2026-06-09;Surconsommation matière ligne 2;Jean Moreau;2026-06-25;Coût;ouverte
+Action;Délai;2026-06-05;Retard livraison client ACME;Claire Dubois;2026-06-17;Délai;ouverte
+Action;Délai;2026-06-11;Goulot d'étranglement poste soudure;Pierre Leroy;2026-06-19;Délai;ouverte
+Action;Personnel;2026-06-10;Absence non remplacée équipe nuit;HR Manager;2026-06-30;RH;ouverte
+Action;Personnel;2026-06-03;Formation sécurité incomplète 2 opérateurs;Nathalie Roux;2026-06-15;Formation;fermee
+Commentaire;Sécurité;2026-06-10;Audit sécurité interne réalisé - 2 points à corriger;;;;
+Commentaire;Sécurité;2026-06-16;Rappel port des gants obligatoire poste découpe;;;;
+Commentaire;Qualité;2026-06-12;Reprise en cours sur lot B12 - 15 pièces isolées;;;;
+Commentaire;Qualité;2026-06-06;Revue process contrôle OK après ajustement;;;;
+Commentaire;Coût;2026-06-09;Réunion achats planifiée jeudi pour matières;;;;
+Commentaire;Délai;2026-06-05;Client ACME informé du retard - nouveau délai validé;;;;
+Commentaire;Délai;2026-06-16;OTD semaine à 87% - objectif 95%;;;;
+Commentaire;Personnel;2026-06-10;Entretiens annuels en cours - 3 restants;;;;
