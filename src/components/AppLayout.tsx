@@ -5,15 +5,18 @@ import {
   LayoutDashboard,
   Target,
   Bell,
+  Sun,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from './ui/Button'
-import { getCurrentEquipe } from '../lib/team'
+import { SyncStatusBar } from './SyncStatusBar'
+import { useApp } from '../context/AppContext'
 
 const links = [
   { to: '/', label: 'Mois', icon: LayoutDashboard },
   { to: '/semaine', label: 'Semaine', icon: CalendarDays },
   { to: '/analytics', label: 'Pilotage', icon: BarChart3 },
+  { to: '/daily', label: 'Daily', icon: Sun },
   { to: '/roulette', label: 'Roulette', icon: Target },
 ]
 
@@ -26,10 +29,11 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, actions, notifCount = 0, onNotifClick }: AppLayoutProps) {
   const loc = useLocation()
-  const equipe = getCurrentEquipe()
+  const { equipe, apiSlow, syncing, syncPending } = useApp()
 
   return (
     <div className="min-h-screen pb-12">
+      <SyncStatusBar apiSlow={apiSlow} syncing={syncing} onRetrySync={() => syncPending()} />
       <header className="sticky top-0 z-40 border-b border-white/50 bg-white/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3 px-4 py-3">
           <nav className="flex flex-wrap items-center gap-1">
@@ -64,6 +68,11 @@ export function AppLayout({ children, actions, notifCount = 0, onNotifClick }: A
         </div>
       </header>
       {children}
+      <footer className="border-t border-slate-200/80 bg-white/50 py-3 text-center text-xs text-slate-500">
+        <Link to="/mentions-legales" className="hover:text-primary hover:underline">
+          Mentions légales &amp; confidentialité
+        </Link>
+      </footer>
     </div>
   )
 }

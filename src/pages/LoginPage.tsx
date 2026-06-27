@@ -1,15 +1,21 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { Lock, Mail } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 
 export function LoginPage() {
-  const { signIn, isConfigured } = useAuth()
+  const { signIn, isConfigured, user } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (user) navigate('/', { replace: true })
+  }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,6 +23,7 @@ export function LoginPage() {
     setLoading(true)
     const { error: err } = await signIn(email, password)
     if (err) setError(err)
+    else navigate('/', { replace: true })
     setLoading(false)
   }
 
@@ -106,6 +113,12 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon`}
             Se connecter
           </Button>
         </form>
+
+        <p className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
+          <Link to="/mentions-legales" className="text-primary hover:underline">
+            Mentions légales &amp; confidentialité
+          </Link>
+        </p>
       </motion.div>
     </div>
   )
