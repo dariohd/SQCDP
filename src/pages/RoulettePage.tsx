@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Plus, RotateCcw, Sparkles, Maximize2, Minimize2, Timer, History } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { APP_ROUTES, DEMO_ROUTES } from '../lib/routes'
 import { ROULETTE_ROLES } from '../lib/constants'
 import { Button } from '../components/ui/Button'
 import { RouletteWheel } from '../components/RouletteWheel'
@@ -17,6 +18,8 @@ interface SpinHistory {
 }
 
 export function RoulettePage() {
+  const loc = useLocation()
+  const routes = loc.pathname.startsWith(DEMO_ROUTES.home) ? DEMO_ROUTES : APP_ROUTES
   const toast = useToast()
   const [participants, setParticipants] = useState<string[]>([])
   const [newName, setNewName] = useState('')
@@ -120,7 +123,7 @@ export function RoulettePage() {
       <div className="mx-auto max-w-[1700px]">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           {!fullscreen && (
-            <Link to="/">
+            <Link to={routes.mois}>
               <Button variant="secondary" className="!border-white/30 !bg-white/20 !text-white backdrop-blur-sm hover:!bg-white/30">
                 <ArrowLeft size={16} />
                 Retour

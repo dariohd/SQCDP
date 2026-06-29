@@ -1,0 +1,21 @@
+Type;Axe;Date;Champ1;Champ2;Champ3;Champ4;Statut
+Etat;Sécurité;2026-06-18;ok;;;;
+Etat;Sécurité;2026-06-17;ok;;;;
+Etat;Sécurité;2026-06-20;attention;;;;
+Etat;Qualité;2026-06-19;attention;;;;
+Etat;Qualité;2026-06-10;ok;;;;
+Etat;Coût;2026-06-20;attention;;;;
+Etat;Coût;2026-06-16;ok;;;;
+Etat;Délai;2026-06-18;attention;;;;
+Etat;Délai;2026-06-05;attention;;;;
+Etat;Personnel;2026-06-20;ok;;;;
+Etat;Personnel;2026-06-10;attention;;;;
+Action;Sécurité;2026-06-17;Correction signalisation validée;Thomas Martin;2026-06-18;Sécurité;fermee
+Action;Qualité;2026-06-19;Reprise lot B12 terminée;Sophie Bernard;2026-06-20;Qualité;fermee
+Action;Délai;2026-06-18;Plan de rattrapage ACME;Claire Dubois;2026-06-22;Délai;ouverte
+Action;Personnel;2026-06-20;Renfort équipe nuit confirmé;Nathalie Roux;2026-06-25;RH;ouverte
+Commentaire;Sécurité;2026-06-10;[MAJ] Audit sécurité — points corrigés;;;;
+Commentaire;Sécurité;2026-06-16;[MAJ] Consignes EPI rappelées à toute l'équipe;;;;
+Commentaire;Qualité;2026-06-12;[MAJ] Lot B12 libéré après contrôle;;;;
+Commentaire;Délai;2026-06-16;[MAJ] OTD remonté à 92% cette semaine;;;;
+Commentaire;Personnel;2026-06-10;[MAJ] 2 entretiens complétés sur 3;;;;

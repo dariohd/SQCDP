@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ListTodo, ExternalLink } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { APP_ROUTES, DEMO_ROUTES } from '../lib/routes'
 import type { Action, Axe, DayData, StateColors, StateLabels } from '../types'
 import { DonutChart } from './DonutChart'
 import { Button } from './ui/Button'
@@ -31,6 +32,8 @@ export function StandUpOverlay({
   onDayClick,
   onActionClick,
 }: Props) {
+  const loc = useLocation()
+  const routes = loc.pathname.startsWith(DEMO_ROUTES.home) ? DEMO_ROUTES : APP_ROUTES
   const openActions = getOpenActions(actions).slice(0, 8)
 
   if (!open) return null
@@ -46,7 +49,7 @@ export function StandUpOverlay({
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h1 className="text-2xl font-bold">Mode Stand-up — {monthKey}</h1>
           <div className="flex gap-2">
-            <Link to="/daily">
+            <Link to={routes.daily}>
               <Button variant="secondary" className="!text-xs !py-2">
                 <ExternalLink size={14} />
                 Mode Daily

@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import type { Axe, Action, Comment, StateColors, StateLabels } from '../types'
-import { api, processSyncQueue, wasLastApiSlow } from '../lib/api'
+import { api, processSyncQueue, wasLastApiSlow, checkApiHealth } from '../lib/api'
 import { DEFAULT_COLORS, DEFAULT_LABELS } from '../lib/constants'
 import { filterActionsForEquipe } from '../lib/filters'
 import { getCurrentMonthYearKey } from '../lib/utils'
 import { getCurrentEquipe, setEquipe as saveEquipe } from '../lib/team'
+import { isDemoMode, DEMO_MONTH_KEY } from '../lib/demoMode'
 
 interface AppContextValue {
   axes: Axe[]
@@ -19,8 +20,10 @@ interface AppContextValue {
   setEquipe: (equipe: string) => void
   loading: boolean
   apiSlow: boolean
+  apiConnected: boolean
   syncing: boolean
   dataVersion: number
+  isReadOnly: boolean
   refresh: () => Promise<void>
   syncPending: () => Promise<void>
   bumpData: () => void
@@ -40,16 +43,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [equipe, setEquipeState] = useState(getCurrentEquipe)
   const [loading, setLoading] = useState(true)
   const [apiSlow, setApiSlow] = useState(false)
+  const [apiConnected, setApiConnected] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
 
   const actions = filterActionsForEquipe(allActions, equipe)
+  const effectiveMonthKey = isDemoMode() ? DEMO_MONTH_KEY : monthKey
 
   const bumpData = useCallback(() => setDataVersion((v) => v + 1), [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
+      const healthy = await checkApiHealth()
+      setApiConnected(healthy)
       await api.loadOrganisation()
       await api.loadParams()
       const [axesData, actionsData, commentsData] = await Promise.all([
@@ -91,6 +98,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refresh, syncPending])
 
   useEffect(() => {
+    const onDemoReady = () => {
+      refresh()
+      bumpData()
+    }
+    window.addEventListener('sqcdp-demo-ready', onDemoReady)
+    return () => window.removeEventListener('sqcdp-demo-ready', onDemoReady)
+  }, [refresh, bumpData])
+
+  useEffect(() => {
     const onEquipe = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail
       if (detail) {
@@ -129,14 +145,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         actions,
         allActions,
         commentaires,
-        monthKey,
+        monthKey: effectiveMonthKey,
         equipe,
         setMonthKey,
         setEquipe,
         loading,
         apiSlow,
+        apiConnected,
         syncing,
         dataVersion,
+        isReadOnly: isDemoMode(),
         refresh,
         syncPending,
         bumpData,

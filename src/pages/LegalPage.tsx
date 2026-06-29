@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ROUTES } from '../lib/routes'
 
 const AGENCY = {
   name: 'Bulle ton site',
@@ -12,10 +13,10 @@ export function LegalPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-10">
       <div className="mx-auto max-w-3xl rounded-3xl bg-white p-8 shadow-xl shadow-primary/5 md:p-12">
         <Link
-          to="/login"
+          to={ROUTES.landing}
           className="mb-6 inline-block text-sm font-medium text-primary hover:underline"
         >
-          ← Retour
+          ← Retour à l'accueil
         </Link>
 
         <h1 className="text-3xl font-bold text-slate-900">Mentions légales &amp; confidentialité</h1>

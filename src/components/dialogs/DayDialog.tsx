@@ -32,7 +32,7 @@ export function DayDialog({
   onEditAction,
   onRefresh,
 }: DayDialogProps) {
-  const { colors, labels, refresh } = useApp()
+  const { colors, labels, refresh, isReadOnly } = useApp()
   const [saving, setSaving] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [showCommentForm, setShowCommentForm] = useState(false)
@@ -89,6 +89,12 @@ export function DayDialog({
       title={`${axe.label} — Jour ${dayNum} (${formatDateJJMMAA(dateStr)})`}
       size="lg"
     >
+      {isReadOnly && (
+        <p className="rounded-xl bg-violet-50 px-3 py-2 text-xs text-violet-800">
+          Mode démo : consultation seule. Les actions et commentaires sont visibles mais non modifiables.
+        </p>
+      )}
+
       <div className="space-y-6">
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-600">État du jour</label>
@@ -96,8 +102,8 @@ export function DayDialog({
             {etatOptions.map((o) => (
               <button
                 key={o.key}
-                onClick={() => handleEtatChange(o.key)}
-                disabled={saving}
+                onClick={() => !isReadOnly && handleEtatChange(o.key)}
+                disabled={saving || isReadOnly}
                 className={`flex items-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition ${
                   day.etat === o.key
                     ? 'border-primary bg-primary/5 shadow-md'
@@ -116,10 +122,12 @@ export function DayDialog({
             <h3 className="font-semibold text-slate-700">
               Actions ({day.actions.length})
             </h3>
+            {!isReadOnly && (
             <Button variant="action" className="!py-2 !text-xs" onClick={() => onAddAction(dateStr)}>
               <Plus size={14} />
               Ajouter
             </Button>
+            )}
           </div>
           {day.actions.length === 0 ? (
             <p className="text-sm italic text-slate-400">Aucune action ce jour</p>
@@ -152,10 +160,12 @@ export function DayDialog({
               <MessageSquare size={16} />
               Commentaires ({day.commentaires.length})
             </h3>
+            {!isReadOnly && (
             <Button variant="secondary" className="!py-2 !text-xs" onClick={() => setShowCommentForm(!showCommentForm)}>
               <Plus size={14} />
               Ajouter
             </Button>
+            )}
           </div>
           {showCommentForm && (
             <div className="mb-3 space-y-2">
@@ -178,7 +188,7 @@ export function DayDialog({
                 className="flex items-start justify-between gap-3 rounded-xl border border-[#c8ddf4] bg-[#eaf1fb] p-3"
               >
                 <p className="text-sm text-slate-700">{c.content}</p>
-                {c.id && (
+                {c.id && !isReadOnly && (
                   <button
                     onClick={() => setConfirmDeleteComment(c.id!)}
                     className="shrink-0 text-delete hover:text-[#a21d1d]"

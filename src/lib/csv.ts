@@ -25,13 +25,81 @@ function findAxeId(axes: Axe[], label: string): number | null {
   return axe?.id ?? null
 }
 
-const VALID_ETATS: EtatApi[] = ['ok', 'attention', 'blocage', 'non rempli']
-
 export interface ImportResult {
   actions: number
   comments: number
   etats: number
   errors: string[]
+}
+
+const VALID_ETATS: EtatApi[] = ['ok', 'attention', 'blocage', 'non rempli']
+
+export function parseCsvText(content: string): Record<string, string>[] {
+  return parseCSV(content)
+}
+
+export function importCsvRowsToData(
+  rows: Record<string, string>[],
+  axes: Axe[],
+  equipe: string,
+): { actions: Action[]; comments: Comment[]; dayStates: DayState[]; errors: string[] } {
+  const actions: Action[] = []
+  const comments: Comment[] = []
+  const dayStates: DayState[] = []
+  const errors: string[] = []
+  let actionId = 1
+  let commentId = 1
+
+  for (const row of rows) {
+    const type = row.Type || row.type
+    const axeLabel = row.Axe || row.axe
+    const date = row.Date || row.date
+    const axeId = findAxeId(axes, axeLabel)
+
+    if (!axeId) {
+      errors.push(`Axe inconnu: ${axeLabel}`)
+      continue
+    }
+
+    if (type === 'Action') {
+      if (!row.Champ1 || !row.Champ2) {
+        errors.push(`Action incomplète: ${row.Champ1 || '?'}`)
+        continue
+      }
+      actions.push({
+        id: actionId++,
+        axe_id: axeId,
+        probleme: row.Champ1,
+        porteur: row.Champ2,
+        echeance: row.Champ3 || null,
+        categorie: row.Champ4 || undefined,
+        statut: row.Statut === 'fermee' ? 'fermee' : 'ouverte',
+        created_at: date || undefined,
+        equipe: row.Equipe || equipe,
+      })
+    } else if (type === 'Commentaire') {
+      if (!row.Champ1 || !date) {
+        errors.push('Commentaire incomplet')
+        continue
+      }
+      comments.push({
+        id: commentId++,
+        axe_id: axeId,
+        date,
+        content: row.Champ1,
+        equipe,
+      })
+    } else if (type === 'Etat') {
+      const etat = row.Champ1.trim().toLowerCase() as EtatApi
+      if (!date || !VALID_ETATS.includes(etat)) {
+        errors.push(`État invalide: ${row.Champ1}`)
+        continue
+      }
+      dayStates.push({ axe_id: axeId, date, etat, equipe })
+    }
+  }
+
+  return { actions, comments, dayStates, errors }
 }
 
 export async function importFromCSV(file: File, axes: Axe[]): Promise<ImportResult> {

@@ -41,7 +41,7 @@ const ROULETTE_KEY = 'sqcdp_roulette_participants'
 const CHECKLIST_KEY = 'sqcdp_daily_checklist'
 
 export function DailyPage() {
-  const { axes, actions, monthKey, colors, labels, equipe, bumpData } = useApp()
+  const { axes, actions, monthKey, colors, labels, equipe, bumpData, isReadOnly } = useApp()
   const toast = useToast()
   const { notifications, daysByAxe } = useNotifications()
 
@@ -210,7 +210,7 @@ export function DailyPage() {
     localStorage.removeItem(CHECKLIST_KEY)
     setChecklist(DAILY_CHECKLIST.map((c) => ({ ...c, done: false })))
     logAudit('Daily clôturée', `Durée ${formatTimer(timerSec)}`, 'Daily', '')
-    toast.success('Compte-rendu enregistré et téléchargé')
+    toast.success('Compte-rendu PDF enregistré et téléchargé')
   }
 
   const nextStep = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
@@ -351,9 +351,9 @@ export function DailyPage() {
               <div className="space-y-6 text-center">
                 <h2 className="text-xl font-bold text-primary">Saisie du jour</h2>
                 <p className="text-slate-600">Définissez l'état de chaque axe pour aujourd'hui (jour {todayDay}).</p>
-                <Button onClick={() => setShowBulk(true)}>
+                <Button onClick={() => setShowBulk(true)} disabled={isReadOnly}>
                   <ClipboardList size={16} />
-                  Ouvrir la saisie rapide
+                  {isReadOnly ? 'Saisie (démo lecture seule)' : 'Ouvrir la saisie rapide'}
                 </Button>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mt-6">
                   {todayStates.map(({ axe, etat }) => (
@@ -435,12 +435,14 @@ export function DailyPage() {
                     )
                   })
                 )}
-                <Button
-                  variant="action"
-                  onClick={() => axes[0] && setActionDialog({ axe: axes[0] })}
-                >
-                  Nouvelle action
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    variant="action"
+                    onClick={() => axes[0] && setActionDialog({ axe: axes[0] })}
+                  >
+                    Nouvelle action
+                  </Button>
+                )}
               </div>
             )}
 
@@ -465,7 +467,7 @@ export function DailyPage() {
                 </pre>
                 <Button onClick={finishDaily}>
                   <Download size={16} />
-                  Télécharger le compte-rendu
+                  {isReadOnly ? 'Télécharger un aperçu (démo)' : 'Télécharger le compte-rendu'}
                 </Button>
               </div>
             )}

@@ -2,6 +2,7 @@ import type { Action, Axe, EtatKey } from '../types'
 import type { AppNotification } from './notifications'
 import { ROULETTE_ROLES } from './constants'
 import { getParisDateParts } from './utils'
+import { exportDailyPDF } from './pdfExport'
 
 export interface DailyReportData {
   date: string
@@ -61,6 +62,10 @@ export function buildDailyReportText(data: DailyReportData): string {
 }
 
 export function downloadDailyReport(data: DailyReportData) {
+  exportDailyPDF(data)
+}
+
+export function downloadDailyReportText(data: DailyReportData) {
   const text = buildDailyReportText(data)
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)

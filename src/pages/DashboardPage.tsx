@@ -34,7 +34,7 @@ import { getAxeFromNotification, useNotifications } from '../hooks/useNotificati
 import { useGlobalKeyboardShortcuts } from '../hooks/useGlobalKeyboardShortcuts'
 
 export function DashboardPage() {
-  const { axes, actions, commentaires, monthKey, loading, refresh, colors, labels, dataVersion, bumpData } = useApp()
+  const { axes, actions, commentaires, monthKey, loading, refresh, colors, labels, dataVersion, bumpData, isReadOnly } = useApp()
   const { signOut, isConfigured, user } = useAuth()
   const toast = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -55,11 +55,13 @@ export function DashboardPage() {
 
   const shortcuts = useCallback(() => ({
     r: () => refresh(),
-    i: () => fileInputRef.current?.click(),
+    ...(isReadOnly ? {} : {
+      i: () => fileInputRef.current?.click(),
+      b: () => setShowBulk(true),
+    }),
     s: () => setStandUp(true),
-    b: () => setShowBulk(true),
     n: () => setShowNotifs(true),
-  }), [refresh])
+  }), [refresh, isReadOnly])
 
   useGlobalKeyboardShortcuts(shortcuts())
 
@@ -113,22 +115,26 @@ export function DashboardPage() {
             <Maximize2 size={14} />
             Stand-up
           </Button>
-          <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setShowBulk(true)}>
-            <PenLine size={14} />
-            Saisie
-          </Button>
-          <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => fileInputRef.current?.click()} loading={importing}>
-            <Upload size={14} />
-            Import
-          </Button>
-          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
-          <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={handleExport}>
-            <Download size={14} />
-            CSV
-          </Button>
-          <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setShowSettings(true)}>
-            <Settings size={14} />
-          </Button>
+          {!isReadOnly && (
+            <>
+              <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setShowBulk(true)}>
+                <PenLine size={14} />
+                Saisie
+              </Button>
+              <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => fileInputRef.current?.click()} loading={importing}>
+                <Upload size={14} />
+                Import
+              </Button>
+              <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }} />
+              <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={handleExport}>
+                <Download size={14} />
+                CSV
+              </Button>
+              <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setShowSettings(true)}>
+                <Settings size={14} />
+              </Button>
+            </>
+          )}
           <Button variant="ghost" className="!px-2" onClick={() => refresh()}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </Button>

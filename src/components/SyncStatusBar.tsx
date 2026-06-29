@@ -1,51 +1,70 @@
-import { Cloud, CloudOff, Loader2, RefreshCw } from 'lucide-react'
+import { Cloud, CloudOff, Database, Loader2, RefreshCw } from 'lucide-react'
 import { useSyncStatus } from '../hooks/useSyncStatus'
 
 interface SyncStatusBarProps {
   apiSlow?: boolean
+  apiConnected?: boolean
   onRetrySync?: () => void
   syncing?: boolean
 }
 
-export function SyncStatusBar({ apiSlow, onRetrySync, syncing }: SyncStatusBarProps) {
+export function SyncStatusBar({ apiSlow, apiConnected, onRetrySync, syncing }: SyncStatusBarProps) {
   const { online, pending } = useSyncStatus()
 
-  if (online && pending === 0 && !apiSlow && !syncing) return null
+  if (!online) {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        <CloudOff size={14} />
+        <span>Mode hors ligne — modifications en attente de synchronisation</span>
+      </div>
+    )
+  }
+
+  if (apiSlow) {
+    return (
+      <div className="flex items-center justify-center gap-2 border-b border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-900">
+        <Loader2 size={14} className="animate-spin" />
+        <span>Connexion à Supabase…</span>
+      </div>
+    )
+  }
+
+  if (syncing) {
+    return (
+      <div className="flex items-center justify-center gap-2 border-b border-orange-200 bg-orange-50 px-4 py-2 text-xs text-orange-900">
+        <RefreshCw size={14} className="animate-spin" />
+        <span>Synchronisation en cours…</span>
+      </div>
+    )
+  }
+
+  if (pending > 0) {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-orange-200 bg-orange-50 px-4 py-2 text-xs text-orange-900">
+        <Cloud size={14} />
+        <span>{pending} modification(s) en attente</span>
+        {onRetrySync && (
+          <button type="button" onClick={onRetrySync} className="font-semibold underline">
+            Synchroniser
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  if (apiConnected) {
+    return (
+      <div className="flex items-center justify-center gap-2 border-b border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs text-emerald-900">
+        <Database size={14} />
+        <span>Données enregistrées sur le serveur — accessibles depuis tous les postes</span>
+      </div>
+    )
+  }
 
   return (
-    <div
-      className={`flex flex-wrap items-center justify-center gap-2 border-b px-4 py-2 text-xs ${
-        !online ? 'border-amber-200 bg-amber-50 text-amber-900' :
-        apiSlow ? 'border-blue-200 bg-blue-50 text-blue-900' :
-        'border-orange-200 bg-orange-50 text-orange-900'
-      }`}
-    >
-      {!online ? (
-        <>
-          <CloudOff size={14} />
-          <span>Mode hors ligne — les modifications sont enregistrées localement</span>
-        </>
-      ) : apiSlow ? (
-        <>
-          <Loader2 size={14} className="animate-spin" />
-          <span>Réveil du serveur en cours (première connexion)…</span>
-        </>
-      ) : syncing ? (
-        <>
-          <RefreshCw size={14} className="animate-spin" />
-          <span>Synchronisation en cours…</span>
-        </>
-      ) : (
-        <>
-          <Cloud size={14} />
-          <span>{pending} modification(s) en attente de synchronisation</span>
-          {onRetrySync && (
-            <button type="button" onClick={onRetrySync} className="font-semibold underline">
-              Synchroniser
-            </button>
-          )}
-        </>
-      )}
+    <div className="flex flex-wrap items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+      <CloudOff size={14} />
+      <span>Supabase injoignable — vérifiez la connexion ou reconnectez-vous</span>
     </div>
   )
 }

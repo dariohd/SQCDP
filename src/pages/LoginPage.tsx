@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Lock, Mail } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
+import { APP_ROUTES, ROUTES } from '../lib/routes'
 
 export function LoginPage() {
   const { signIn, isConfigured, user } = useAuth()
@@ -14,7 +15,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (user) navigate('/', { replace: true })
+    if (user) navigate(APP_ROUTES.home, { replace: true })
   }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +24,7 @@ export function LoginPage() {
     setLoading(true)
     const { error: err } = await signIn(email, password)
     if (err) setError(err)
-    else navigate('/', { replace: true })
+    else navigate(APP_ROUTES.home, { replace: true })
     setLoading(false)
   }
 
@@ -115,8 +116,12 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon`}
         </form>
 
         <p className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
-          <Link to="/mentions-legales" className="text-primary hover:underline">
-            Mentions légales &amp; confidentialité
+          <Link to={ROUTES.landing} className="text-primary hover:underline">
+            ← Retour au site
+          </Link>
+          {' · '}
+          <Link to={ROUTES.legal} className="text-primary hover:underline">
+            Mentions légales
           </Link>
         </p>
       </motion.div>

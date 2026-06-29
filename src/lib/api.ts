@@ -7,7 +7,6 @@ import type {
   DailyReportRecord,
   EquipeRecord,
   Organisation,
-  SiteRecord,
 } from '../types'
 import {
   DEFAULT_AXES,
@@ -33,9 +32,29 @@ import {
 } from './organisation'
 import { enqueueSync, type SyncJob } from './syncQueue'
 import { getCurrentEquipe, getSettings } from './team'
-import { apiFetch, apiFetchVoid, buildApiUrl, getApiHeaders } from './api/http'
+import { isDemoMode } from './demoMode'
+import { notifyDemoReadOnly } from './demoToast'
+import {
+  clearDemoStore,
+  getDemoAction,
+  getDemoActions,
+  getDemoComments,
+  getDemoDailyReports,
+  getDemoDayStates,
+  getDemoOrganisation,
+  getDemoParams,
+  initDemoStore,
+  isDemoStoreReady,
+} from './demoStore'
+import { isSupabaseConfigured } from './supabase'
+import { clearEquipeCache, supabaseData } from './data/supabaseRepo'
+import { checkRemoteHealth, isRemoteHealthy, useRemoteAsSource } from './api/connection'
 
-export { wasLastApiSlow } from './api/http'
+export { initDemoStore, clearDemoStore, isDemoStoreReady }
+export { checkRemoteHealth as checkApiHealth, isRemoteHealthy }
+export function wasLastApiSlow() {
+  return false
+}
 
 class ApiCache {
   private cache = new Map<string, unknown>()
@@ -55,48 +74,61 @@ class ApiCache {
 
 const cache = new ApiCache()
 
-function withEquipe<T extends { equipe?: string }>(items: T[]): T[] {
-  const eq = getCurrentEquipe()
-  return items.filter((i) => !i.equipe || i.equipe === eq)
+function useCloud() {
+  return isSupabaseConfigured() && !isDemoMode()
+}
+
+function blockDemoWrite() {
+  if (!isDemoMode()) return false
+  notifyDemoReadOnly()
+  return true
 }
 
 async function executeSyncJob(job: SyncJob): Promise<void> {
   const p = job.payload
+  if (!useCloud()) throw new Error('Sync requires Supabase')
+
   switch (job.type) {
-    case 'dayState':
-      await apiFetch('/jour_etats', { method: 'POST', body: JSON.stringify(p) })
-      break
-    case 'action': {
-      const action = p as unknown as Action
-      const isUpdate = !!action.id
-      await apiFetch(isUpdate ? `/actions/${action.id}` : '/actions', {
-        method: isUpdate ? 'PUT' : 'POST',
-        body: JSON.stringify(action),
-      })
+    case 'dayState': {
+      const equipe = String(p.equipe ?? getCurrentEquipe())
+      const date =
+        (p.date as string) ??
+        (() => {
+          const now = new Date()
+          const tz = { timeZone: 'Europe/Paris' as const }
+          const y = now.toLocaleString('fr-FR', { ...tz, year: 'numeric' })
+          const m = now.toLocaleString('fr-FR', { ...tz, month: '2-digit' })
+          return `${y}-${m}-${String(p.jour).padStart(2, '0')}`
+        })()
+      await supabaseData.saveDayState(equipe, p.axe_id as number, p.etat as string, date)
       break
     }
+    case 'action':
+      await supabaseData.saveAction(p as unknown as Action)
+      break
     case 'actionDelete':
-      await apiFetchVoid(`/actions/${p.id}`, { method: 'DELETE' })
+      await supabaseData.deleteAction(p.id as number)
       break
     case 'comment':
-      await apiFetch('/commentaires', { method: 'POST', body: JSON.stringify(p) })
+      await supabaseData.addComment(p as unknown as Omit<Comment, 'id'>)
       break
     case 'commentDelete':
-      await apiFetchVoid(`/commentaires/${p.id}`, { method: 'DELETE' })
+      await supabaseData.deleteComment(p.id as number)
       break
     case 'params':
-      await apiFetch('/params', { method: 'POST', body: JSON.stringify(p) })
+      await supabaseData.saveParams(p as unknown as AppParams)
       break
     case 'dailyReport':
-      await apiFetch('/daily_reports', { method: 'POST', body: JSON.stringify(p) })
+      await supabaseData.saveDailyReport(p as unknown as DailyReportRecord)
       break
     case 'equipe':
-      await apiFetch('/equipes', { method: 'POST', body: JSON.stringify(p) })
+      await supabaseData.saveEquipe(String(p.name))
       break
   }
 }
 
 export async function processSyncQueue(): Promise<number> {
+  if (isDemoMode() || !useCloud()) return 0
   const raw = localStorage.getItem('sqcdp_sync_queue')
   if (!raw) return 0
   const jobs = JSON.parse(raw) as SyncJob[]
@@ -125,59 +157,52 @@ export const api = {
 
   clearCache() {
     cache.clear()
+    clearEquipeCache()
   },
 
   async loadOrganisation(): Promise<Organisation> {
     const cached = cache.get<Organisation>('organisation')
     if (cached) return cached
-    try {
-      const site = getSettings().site
-      const [sites, equipes] = await Promise.all([
-        apiFetch<SiteRecord[]>('/sites').catch(() => [] as SiteRecord[]),
-        apiFetch<EquipeRecord[]>('/equipes', { query: { site } }).catch(() => [] as EquipeRecord[]),
-      ])
-      const siteName = sites[0]?.name ?? site
-      const org: Organisation = {
-        site: siteName,
-        equipes: equipes.length
-          ? equipes.map((e) => ({ ...e, site: e.site ?? siteName }))
-          : getSettings().equipes.map((name) => ({ name, site: siteName })),
-      }
-      const merged = mergeOrganisation(org)
-      cache.set('organisation', merged)
-      return merged
-    } catch {
-      const merged = mergeOrganisation(null)
-      cache.set('organisation', merged)
-      return merged
+
+    if (isDemoMode()) {
+      const org = getDemoOrganisation()
+      cache.set('organisation', org)
+      return org
     }
+
+    if (useCloud()) {
+      try {
+        const org = await supabaseData.loadOrganisation()
+        const merged = mergeOrganisation(org)
+        cache.set('organisation', merged)
+        return merged
+      } catch {
+        /* fallback local */
+      }
+    }
+
+    const merged = mergeOrganisation(null)
+    cache.set('organisation', merged)
+    return merged
   },
 
   async saveEquipe(name: string): Promise<EquipeRecord> {
+    if (blockDemoWrite()) return { name, site: getSettings().site }
     const site = getSettings().site
-    const payload = { name, site }
-    try {
-      const result = await apiFetch<EquipeRecord>('/equipes', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-      cache.invalidate('organisation')
-      const org = await this.loadOrganisation()
-      if (!org.equipes.some((e) => e.name === name)) {
-        saveLocalOrganisation({
-          site: org.site,
-          equipes: [...org.equipes, { name, site }],
-        })
+    if (useCloud()) {
+      try {
+        const result = await supabaseData.saveEquipe(name)
+        cache.invalidate('organisation')
+        return result
+      } catch {
+        enqueueSync('equipe', { name, site })
       }
-      return result
-    } catch {
-      enqueueSync('equipe', payload)
-      const org = mergeOrganisation(null)
-      const next = { site: org.site, equipes: [...org.equipes, { name, site }] }
-      saveLocalOrganisation(next)
-      cache.invalidate('organisation')
-      return { name, site }
     }
+    const org = mergeOrganisation(null)
+    const next = { site: org.site, equipes: [...org.equipes, { name, site }] }
+    saveLocalOrganisation(next)
+    cache.invalidate('organisation')
+    return { name, site }
   },
 
   async loadDailyReports(limit = 20): Promise<DailyReportRecord[]> {
@@ -185,59 +210,73 @@ export const api = {
     const key = `daily_reports_${equipe}`
     const cached = cache.get<DailyReportRecord[]>(key)
     if (cached) return cached
-    try {
-      const reports = await apiFetch<DailyReportRecord[]>('/daily_reports', {
-        query: { equipe, limit },
-      })
-      const merged = [...reports, ...getLocalDailyReports(equipe)]
-        .filter((r, i, arr) => arr.findIndex((x) => x.date === r.date && x.equipe === r.equipe) === i)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, limit)
-      cache.set(key, merged)
-      return merged
-    } catch {
-      const local = getLocalDailyReports(equipe).slice(0, limit)
-      cache.set(key, local)
-      return local
+
+    if (isDemoMode()) {
+      const reports = getDemoDailyReports().slice(0, limit)
+      cache.set(key, reports)
+      return reports
     }
+
+    if (useCloud()) {
+      try {
+        const reports = await supabaseData.loadDailyReports(equipe, limit)
+        cache.set(key, reports)
+        return reports
+      } catch {
+        /* local fallback */
+      }
+    }
+
+    const local = getLocalDailyReports(equipe).slice(0, limit)
+    cache.set(key, local)
+    return local
   },
 
   async saveDailyReport(report: DailyReportRecord): Promise<DailyReportRecord> {
+    if (blockDemoWrite()) return report
     const equipe = report.equipe || getCurrentEquipe()
     const payload: DailyReportRecord = {
       ...report,
       equipe,
       site: report.site ?? getSettings().site,
     }
-    try {
-      const result = await apiFetch<DailyReportRecord>('/daily_reports', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-      addLocalDailyReport(result)
-      cache.invalidate(`daily_reports_${equipe}`)
-      return result
-    } catch {
-      enqueueSync('dailyReport', payload as unknown as Record<string, unknown>)
-      addLocalDailyReport(payload)
-      cache.invalidate(`daily_reports_${equipe}`)
-      return payload
+
+    if (useCloud()) {
+      try {
+        const result = await supabaseData.saveDailyReport(payload)
+        cache.invalidate(`daily_reports_${equipe}`)
+        return result
+      } catch {
+        enqueueSync('dailyReport', payload as unknown as Record<string, unknown>)
+      }
     }
+
+    addLocalDailyReport(payload)
+    cache.invalidate(`daily_reports_${equipe}`)
+    return payload
   },
 
   async loadAxes(): Promise<Axe[]> {
     const cached = cache.get<Axe[]>('axes')
     if (cached) return cached
-    try {
-      const axes = await apiFetch<Axe[]>('/axes')
-      if (Array.isArray(axes) && axes.length > 0) {
-        const filtered = axes.filter((a) => (a.key as string) !== 'DCP')
-        cache.set('axes', filtered)
-        return filtered
-      }
-    } catch {
-      /* fallback */
+
+    if (isDemoMode()) {
+      cache.set('axes', DEFAULT_AXES)
+      return DEFAULT_AXES
     }
+
+    if (useCloud()) {
+      try {
+        const axes = await supabaseData.loadAxes()
+        if (axes.length > 0) {
+          cache.set('axes', axes)
+          return axes
+        }
+      } catch {
+        /* fallback */
+      }
+    }
+
     cache.set('axes', DEFAULT_AXES)
     return DEFAULT_AXES
   },
@@ -245,17 +284,29 @@ export const api = {
   async loadParams(): Promise<AppParams | null> {
     const cached = cache.get<AppParams>('params')
     if (cached) return cached
-    try {
-      const params = await apiFetch<AppParams>('/params')
-      if (params?.colors && params?.labels) {
-        cache.set('params', params)
-        cache.set('colors', params.colors)
-        cache.set('labels', params.labels)
-        return params
-      }
-    } catch {
-      /* fallback local */
+
+    if (isDemoMode()) {
+      const params = getDemoParams()
+      cache.set('params', params)
+      cache.set('colors', params.colors)
+      cache.set('labels', params.labels)
+      return params
     }
+
+    if (useCloud()) {
+      try {
+        const params = await supabaseData.loadParams()
+        if (params) {
+          cache.set('params', params)
+          cache.set('colors', params.colors)
+          cache.set('labels', params.labels)
+          return params
+        }
+      } catch {
+        /* local */
+      }
+    }
+
     try {
       const stored = localStorage.getItem('sqcdp_params_local')
       if (stored) {
@@ -274,23 +325,36 @@ export const api = {
     const key = axeId ? `jour_etats_${axeId}_${equipe}` : `jour_etats_${equipe}`
     const cached = cache.get<DayState[]>(key)
     if (cached) return cached
-    let apiStates: DayState[] = []
-    try {
-      apiStates = withEquipe(await apiFetch<DayState[]>('/jour_etats'))
-      if (axeId) apiStates = apiStates.filter((s) => Number(s.axe_id) === axeId)
-    } catch {
-      apiStates = []
+
+    if (isDemoMode()) {
+      const states = getDemoDayStates(equipe, axeId)
+      cache.set(key, states)
+      return states
     }
-    const merged = axeId ? mergeDayStates(apiStates, axeId, equipe) : apiStates
+
+    let remoteStates: DayState[] = []
+    if (useCloud()) {
+      try {
+        remoteStates = await supabaseData.loadDayStates(equipe, axeId)
+      } catch {
+        remoteStates = []
+      }
+    }
+
+    const merged = useRemoteAsSource()
+      ? remoteStates
+      : axeId
+        ? mergeDayStates(remoteStates, axeId, equipe)
+        : remoteStates
+
     cache.set(key, merged)
     return merged
   },
 
   async saveDayState(jour: number, axe_id: number, etat: string, date?: string): Promise<void> {
+    if (blockDemoWrite()) return
     const equipe = getCurrentEquipe()
     const site = getSettings().site
-    const payload: Record<string, unknown> = { jour, axe_id, etat, equipe, site }
-    if (date) payload.date = date
 
     const dateStr =
       date ??
@@ -302,13 +366,17 @@ export const api = {
         return `${y}-${m}-${String(jour).padStart(2, '0')}`
       })()
 
-    try {
-      await apiFetch('/jour_etats', { method: 'POST', body: JSON.stringify(payload) })
-    } catch {
-      enqueueSync('dayState', payload)
+    if (useCloud()) {
+      try {
+        await supabaseData.saveDayState(equipe, axe_id, etat, dateStr)
+      } catch {
+        enqueueSync('dayState', { jour, axe_id, etat, equipe, site, date: dateStr })
+        upsertLocalDayState({ axe_id, date: dateStr, etat: etat as DayState['etat'], equipe })
+      }
+    } else {
+      upsertLocalDayState({ axe_id, date: dateStr, etat: etat as DayState['etat'], equipe })
     }
 
-    upsertLocalDayState({ axe_id, date: dateStr, etat: etat as DayState['etat'], equipe })
     cache.invalidate('jour_etats', `jour_etats_${axe_id}`, `jour_etats_${axe_id}_${equipe}`, 'monthlyData')
   },
 
@@ -317,46 +385,72 @@ export const api = {
     const key = `actions_${equipe}`
     const cached = cache.get<Action[]>(key)
     if (cached) return cached
-    let apiActions: Action[] = []
-    try {
-      apiActions = withEquipe(await apiFetch<Action[]>('/actions'))
-    } catch {
-      apiActions = []
+
+    if (isDemoMode()) {
+      const list = getDemoActions(equipe)
+      cache.set(key, list)
+      return list
     }
-    const merged = mergeActions(apiActions, equipe)
+
+    let remoteActions: Action[] = []
+    if (useCloud()) {
+      try {
+        remoteActions = await supabaseData.loadActions(equipe)
+      } catch {
+        remoteActions = []
+      }
+    }
+
+    const merged = useRemoteAsSource() ? remoteActions : mergeActions(remoteActions, equipe)
     cache.set(key, merged)
     return merged
   },
 
   async getAction(id: number): Promise<Action> {
-    return apiFetch<Action>(`/actions/${id}`)
+    if (isDemoMode()) {
+      const action = getDemoAction(id)
+      if (!action) throw new Error('Action introuvable')
+      return action
+    }
+    if (useCloud()) return supabaseData.getAction(id)
+    throw new Error('Action introuvable')
   },
 
   async saveAction(action: Action): Promise<Action> {
+    if (blockDemoWrite()) return { ...action, equipe: action.equipe ?? getCurrentEquipe() }
     const equipe = action.equipe ?? getCurrentEquipe()
     const withEquipe: Action = { ...action, equipe }
-    const isUpdate = !!withEquipe.id
-    let result = withEquipe
-    try {
-      result = await apiFetch<Action>(isUpdate ? `/actions/${withEquipe.id}` : '/actions', {
-        method: isUpdate ? 'PUT' : 'POST',
-        body: JSON.stringify(withEquipe),
-      })
-    } catch {
-      enqueueSync('action', withEquipe as unknown as Record<string, unknown>)
-      if (isUpdate) updateLocalAction(withEquipe)
+
+    if (useCloud()) {
+      try {
+        const result = await supabaseData.saveAction(withEquipe)
+        cache.invalidate('actions', `actions_${equipe}`, 'monthlyData')
+        return result
+      } catch {
+        enqueueSync('action', withEquipe as unknown as Record<string, unknown>)
+        if (withEquipe.id) updateLocalAction(withEquipe)
+        else addLocalAction(withEquipe)
+      }
+    } else {
+      if (withEquipe.id) updateLocalAction(withEquipe)
       else addLocalAction(withEquipe)
     }
+
     cache.invalidate('actions', `actions_${equipe}`, 'monthlyData')
-    return result
+    return withEquipe
   },
 
   async deleteAction(id: number): Promise<void> {
+    if (blockDemoWrite()) return
     const equipe = getCurrentEquipe()
-    try {
-      await apiFetchVoid(`/actions/${id}`, { method: 'DELETE' })
-    } catch {
-      enqueueSync('actionDelete', { id })
+    if (useCloud()) {
+      try {
+        await supabaseData.deleteAction(id)
+      } catch {
+        enqueueSync('actionDelete', { id })
+        removeLocalAction(id)
+      }
+    } else {
       removeLocalAction(id)
     }
     cache.invalidate('actions', `actions_${equipe}`, 'monthlyData')
@@ -367,51 +461,76 @@ export const api = {
     const key = `commentaires_${equipe}`
     const cached = cache.get<Comment[]>(key)
     if (cached) return cached
-    let apiComments: Comment[] = []
-    try {
-      apiComments = withEquipe(await apiFetch<Comment[]>('/commentaires'))
-    } catch {
-      apiComments = []
+
+    if (isDemoMode()) {
+      const list = getDemoComments(equipe)
+      cache.set(key, list)
+      return list
     }
-    const merged = mergeComments(apiComments, equipe)
+
+    let remoteComments: Comment[] = []
+    if (useCloud()) {
+      try {
+        remoteComments = await supabaseData.loadCommentaires(equipe)
+      } catch {
+        remoteComments = []
+      }
+    }
+
+    const merged = useRemoteAsSource() ? remoteComments : mergeComments(remoteComments, equipe)
     cache.set(key, merged)
     return merged
   },
 
   async addComment(comment: Omit<Comment, 'id'>): Promise<Comment> {
+    if (blockDemoWrite()) return { ...comment, id: 0, equipe: comment.equipe ?? getCurrentEquipe() }
     const equipe = comment.equipe ?? getCurrentEquipe()
     const withEquipe = { ...comment, equipe }
-    let result: Comment
-    try {
-      result = await apiFetch<Comment>('/commentaires', {
-        method: 'POST',
-        body: JSON.stringify(withEquipe),
-      })
-    } catch {
-      enqueueSync('comment', withEquipe as unknown as Record<string, unknown>)
-      result = { ...withEquipe, id: Date.now() }
-      addLocalComment(result)
+
+    if (useCloud()) {
+      try {
+        const result = await supabaseData.addComment(withEquipe)
+        cache.invalidate('commentaires', `commentaires_${equipe}`, 'monthlyData')
+        return result
+      } catch {
+        enqueueSync('comment', withEquipe as unknown as Record<string, unknown>)
+        const local = { ...withEquipe, id: Date.now() }
+        addLocalComment(local)
+        cache.invalidate('commentaires', `commentaires_${equipe}`, 'monthlyData')
+        return local
+      }
     }
+
+    const local = { ...withEquipe, id: Date.now() }
+    addLocalComment(local)
     cache.invalidate('commentaires', `commentaires_${equipe}`, 'monthlyData')
-    return result
+    return local
   },
 
   async deleteComment(id: number): Promise<void> {
+    if (blockDemoWrite()) return
     const equipe = getCurrentEquipe()
-    try {
-      await apiFetchVoid(`/commentaires/${id}`, { method: 'DELETE' })
-    } catch {
-      enqueueSync('commentDelete', { id })
+    if (useCloud()) {
+      try {
+        await supabaseData.deleteComment(id)
+      } catch {
+        enqueueSync('commentDelete', { id })
+        removeLocalComment(id)
+      }
+    } else {
       removeLocalComment(id)
     }
     cache.invalidate('commentaires', `commentaires_${equipe}`, 'monthlyData')
   },
 
   async saveParams(params: AppParams): Promise<void> {
-    try {
-      await apiFetch('/params', { method: 'POST', body: JSON.stringify(params) })
-    } catch {
-      enqueueSync('params', params as unknown as Record<string, unknown>)
+    if (blockDemoWrite()) return
+    if (useCloud()) {
+      try {
+        await supabaseData.saveParams(params)
+      } catch {
+        enqueueSync('params', params as unknown as Record<string, unknown>)
+      }
     }
     localStorage.setItem('sqcdp_params_local', JSON.stringify(params))
     cache.set('params', params)
@@ -432,6 +551,3 @@ export const api = {
     cache.set('labels', labels)
   },
 }
-
-// Compat tests / imports directs
-export { buildApiUrl, getApiHeaders }

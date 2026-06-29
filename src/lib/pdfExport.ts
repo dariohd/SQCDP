@@ -4,6 +4,107 @@ import type { Action, Axe, Comment, DayState, StateLabels } from '../types'
 import { formatMonthLabel } from './utils'
 import { getCurrentEquipe } from './team'
 
+import type { DailyReportData } from './dailyReport'
+import { ROULETTE_ROLES } from './constants'
+
+export function exportDailyPDF(data: DailyReportData) {
+  const doc = new jsPDF()
+  const equipe = data.equipe
+
+  doc.setFontSize(22)
+  doc.setTextColor(58, 85, 164)
+  doc.text('SQCDP — Compte-rendu Daily', 14, 22)
+
+  doc.setFontSize(11)
+  doc.setTextColor(80, 80, 80)
+  doc.text(`Date : ${data.date}`, 14, 32)
+  doc.text(`Équipe : ${equipe}`, 14, 38)
+  doc.text(
+    `Durée réunion : ${Math.floor(data.timerSec / 60)} min ${data.timerSec % 60} s`,
+    14,
+    44,
+  )
+  doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 50)
+
+  let y = 58
+
+  if (Object.keys(data.rouletteResults).length > 0) {
+    doc.setFontSize(13)
+    doc.setTextColor(58, 85, 164)
+    doc.text('Attribution des rôles', 14, y)
+    y += 8
+    doc.setFontSize(10)
+    doc.setTextColor(60, 60, 60)
+    ROULETTE_ROLES.forEach((r) => {
+      doc.text(`${r.label} : ${data.rouletteResults[r.id] ?? '—'}`, 18, y)
+      y += 6
+    })
+    y += 4
+  }
+
+  doc.setFontSize(13)
+  doc.setTextColor(58, 85, 164)
+  doc.text('États du jour', 14, y)
+  y += 8
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Axe', 'Libellé', 'État']],
+    body: data.todayStates.map(({ axe, etat }) => [axe.key, axe.label, etat]),
+    theme: 'striped',
+    headStyles: { fillColor: [58, 85, 164] },
+    styles: { fontSize: 9 },
+  })
+
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+
+  if (data.notifications.length > 0) {
+    doc.setFontSize(13)
+    doc.setTextColor(236, 83, 83)
+    doc.text('Alertes', 14, y)
+    y += 6
+    autoTable(doc, {
+      startY: y,
+      head: [['Niveau', 'Titre', 'Message']],
+      body: data.notifications.slice(0, 8).map((n) => [n.level, n.title, n.message]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [236, 83, 83] },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+  }
+
+  if (data.openActions.length > 0) {
+    doc.setFontSize(13)
+    doc.setTextColor(58, 85, 164)
+    doc.text('Actions ouvertes', 14, y)
+    autoTable(doc, {
+      startY: y + 4,
+      head: [['Problème', 'Porteur', 'Échéance']],
+      body: data.openActions.slice(0, 12).map((a) => [
+        a.probleme,
+        a.porteur,
+        a.echeance ?? '—',
+      ]),
+      styles: { fontSize: 8 },
+    })
+  }
+
+  const done = data.checklist.filter((c) => c.done)
+  if (done.length > 0) {
+    doc.addPage()
+    doc.setFontSize(13)
+    doc.setTextColor(58, 85, 164)
+    doc.text('Points abordés (ordre du jour)', 14, 20)
+    done.forEach((c, i) => {
+      doc.setFontSize(10)
+      doc.setTextColor(60, 60, 60)
+      doc.text(`✓ ${c.label}`, 18, 30 + i * 7)
+    })
+  }
+
+  doc.save(`Daily_SQCDP_${data.date}_${equipe.replace(/\s+/g, '_')}.pdf`)
+}
+
 export function exportMonthlyPDF(
   monthKey: string,
   axes: Axe[],

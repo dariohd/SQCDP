@@ -37,7 +37,7 @@ const emptyAction = (axeId: number, createdAt?: string): Action => ({
 })
 
 export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSaved }: ActionDialogProps) {
-  const { refresh } = useApp()
+  const { refresh, isReadOnly } = useApp()
   const toast = useToast()
   const { user } = useAuth()
   const [action, setAction] = useState<Action | null>(null)
@@ -136,14 +136,19 @@ export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSave
 
   return (
     <>
-    <Modal open={open} onClose={onClose} title={actionId ? 'Modifier l\'action' : 'Nouvelle action'} size="lg">
+    <Modal open={open} onClose={onClose} title={isReadOnly ? 'Consulter l\'action' : actionId ? 'Modifier l\'action' : 'Nouvelle action'} size="lg">
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
         </div>
       ) : (
         <div className="space-y-4">
-          {!actionId && (
+          {isReadOnly && (
+            <p className="rounded-xl bg-violet-50 px-4 py-3 text-sm text-violet-800">
+              Mode démo — consultation uniquement. Connectez-vous pour modifier les actions.
+            </p>
+          )}
+          {!actionId && !isReadOnly && (
             <div className="flex flex-wrap gap-2">
               <span className="text-xs font-medium text-slate-500 flex items-center gap-1 w-full">
                 <LayoutTemplate size={14} /> Modèles
@@ -181,17 +186,19 @@ export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSave
                     type={f.type ?? 'text'}
                     value={(action[f.key] as string) ?? ''}
                     onChange={(e) => update(f.key, e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary"
+                    readOnly={isReadOnly}
+                    disabled={isReadOnly}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-700"
                   />
                 </div>
               ))}
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-slate-600">Solution</label>
-                <textarea value={action.solution ?? ''} onChange={(e) => update('solution', e.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary" rows={3} />
+                <textarea value={action.solution ?? ''} onChange={(e) => update('solution', e.target.value)} readOnly={isReadOnly} disabled={isReadOnly} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-700" rows={3} />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-600">Statut</label>
-                <select value={action.statut} onChange={(e) => update('statut', e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                <select value={action.statut} onChange={(e) => update('statut', e.target.value)} disabled={isReadOnly} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm disabled:bg-slate-50">
                   <option value="ouverte">Ouverte</option>
                   <option value="fermee">Fermée</option>
                 </select>
@@ -204,7 +211,7 @@ export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSave
               {pdcaFields.map((f) => (
                 <div key={f.key}>
                   <label className="mb-1 block text-sm font-medium text-slate-600">{f.label}</label>
-                  <textarea value={(action[f.key] as string) ?? ''} onChange={(e) => update(f.key, e.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary" rows={2} />
+                  <textarea value={(action[f.key] as string) ?? ''} onChange={(e) => update(f.key, e.target.value)} readOnly={isReadOnly} disabled={isReadOnly} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-700" rows={2} />
                 </div>
               ))}
             </div>
@@ -215,24 +222,26 @@ export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSave
               {d8Fields.map((f) => (
                 <div key={f.key}>
                   <label className="mb-1 block text-sm font-medium text-slate-600">{f.label}</label>
-                  <textarea value={(action[f.key] as string) ?? ''} onChange={(e) => update(f.key, e.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary" rows={2} />
+                  <textarea value={(action[f.key] as string) ?? ''} onChange={(e) => update(f.key, e.target.value)} readOnly={isReadOnly} disabled={isReadOnly} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-primary disabled:bg-slate-50 disabled:text-slate-700" rows={2} />
                 </div>
               ))}
             </div>
           )}
 
           <div className="flex flex-wrap justify-between gap-3 pt-4">
-            {action.id && (
+            {action.id && !isReadOnly && (
               <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                 <Trash2 size={16} />
                 Supprimer
               </Button>
             )}
             <div className="ml-auto flex gap-3">
-              <Button variant="ghost" onClick={onClose}>Annuler</Button>
-              <Button onClick={handleSave} loading={saving} disabled={!action.probleme.trim() || !action.porteur.trim()}>
-                Enregistrer
-              </Button>
+              <Button variant="ghost" onClick={onClose}>{isReadOnly ? 'Fermer' : 'Annuler'}</Button>
+              {!isReadOnly && (
+                <Button onClick={handleSave} loading={saving} disabled={!action.probleme.trim() || !action.porteur.trim()}>
+                  Enregistrer
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { APP_ROUTES, DEMO_ROUTES } from '../lib/routes'
 
 interface ShortcutHandlers {
   r?: () => void
@@ -10,9 +11,14 @@ interface ShortcutHandlers {
   d?: () => void
 }
 
+function getRoutes(pathname: string) {
+  return pathname.startsWith(DEMO_ROUTES.home) ? DEMO_ROUTES : APP_ROUTES
+}
+
 export function useGlobalKeyboardShortcuts(handlers: ShortcutHandlers) {
   const navigate = useNavigate()
   const location = useLocation()
+  const routes = getRoutes(location.pathname)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -20,15 +26,15 @@ export function useGlobalKeyboardShortcuts(handlers: ShortcutHandlers) {
       const key = e.key.toLowerCase()
 
       if (key === 'd' && !e.ctrlKey && !e.metaKey) {
-        if (location.pathname !== '/daily') {
+        if (location.pathname !== routes.daily) {
           e.preventDefault()
-          navigate('/daily')
+          navigate(routes.daily)
         }
         handlers.d?.()
         return
       }
 
-      if (location.pathname !== '/' && location.pathname !== '/daily') return
+      if (location.pathname !== routes.mois && location.pathname !== routes.daily) return
 
       if (key === 'r' && handlers.r) { e.preventDefault(); handlers.r() }
       if (key === 'i' && handlers.i) { e.preventDefault(); handlers.i() }
@@ -38,5 +44,5 @@ export function useGlobalKeyboardShortcuts(handlers: ShortcutHandlers) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handlers, navigate, location.pathname])
+  }, [handlers, navigate, location.pathname, routes])
 }
