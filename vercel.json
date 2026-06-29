@@ -3,7 +3,10 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/((?!assets|sw\\.js|workbox-.*|registerSW\\.js|manifest\\.webmanifest|favicon\\.svg).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!assets|sw\\.js|workbox-.*|registerSW\\.js|manifest\\.webmanifest|favicon\\.svg).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
@@ -11,7 +14,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://bulletonsite.vercel.app https://bulletonsite.com https://www.bulletonsite.com http://localhost:3000"
+          "value": "frame-ancestors 'self' https://*.vercel.app https://bulletonsite.com https://www.bulletonsite.com https://dariohd.github.io http://localhost:3000 http://localhost:5174"
         }
       ]
     }
