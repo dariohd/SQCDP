@@ -30,7 +30,7 @@ import {
   mergeOrganisation,
   saveLocalOrganisation,
 } from './organisation'
-import { enqueueSync, type SyncJob } from './syncQueue'
+import { enqueueSync, readQueue, writeQueue, MAX_JOB_ATTEMPTS, type SyncJob } from './syncQueue'
 import { getCurrentEquipe, getSettings } from './team'
 import { isDemoMode } from './demoMode'
 import { notifyDemoReadOnly } from './demoToast'
@@ -129,9 +129,7 @@ async function executeSyncJob(job: SyncJob): Promise<void> {
 
 export async function processSyncQueue(): Promise<number> {
   if (isDemoMode() || !useCloud()) return 0
-  const raw = localStorage.getItem('sqcdp_sync_queue')
-  if (!raw) return 0
-  const jobs = JSON.parse(raw) as SyncJob[]
+  const jobs = readQueue()
   if (jobs.length === 0) return 0
 
   const remaining: SyncJob[] = []
@@ -140,11 +138,17 @@ export async function processSyncQueue(): Promise<number> {
     try {
       await executeSyncJob(job)
       processed++
-    } catch {
-      remaining.push(job)
+    } catch (err) {
+      const attempts = (job.attempts ?? 0) + 1
+      console.error('[SQCDP] Échec sync', job.type, err)
+      if (attempts < MAX_JOB_ATTEMPTS) {
+        remaining.push({ ...job, attempts })
+      } else {
+        console.error('[SQCDP] Job abandonné après', MAX_JOB_ATTEMPTS, 'tentatives', job.id)
+      }
     }
   }
-  localStorage.setItem('sqcdp_sync_queue', JSON.stringify(remaining))
+  writeQueue(remaining)
   window.dispatchEvent(new CustomEvent('sqcdp-sync-change'))
   if (processed > 0) cache.clear()
   return processed

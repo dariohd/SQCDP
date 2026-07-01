@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { config } from './config.js'
 import { pool } from './db.js'
-import { contextMiddleware } from './middleware/context.js'
+import { contextMiddleware, requireAuth } from './middleware/context.js'
 import { runMigrations } from './scripts/initDb.js'
 import referentielRoutes from './routes/referentiel.js'
 import sqcdpRoutes from './routes/sqcdp.js'
@@ -12,7 +12,7 @@ const app = express()
 
 app.use(
   cors({
-    origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
+    origin: config.corsOrigins.length > 0 ? config.corsOrigins : false,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-SQCDP-Equipe', 'X-SQCDP-Site'],
   }),
 )
@@ -27,6 +27,8 @@ app.get('/health', async (_req, res) => {
     res.status(503).json({ status: 'degraded', db: false })
   }
 })
+
+app.use(requireAuth)
 
 app.use(referentielRoutes)
 app.use(sqcdpRoutes)

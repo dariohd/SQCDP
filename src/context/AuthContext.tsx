@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 import { setApiAccessToken } from '../lib/api/authBridge'
+import { ensureSiteMembership } from '../lib/membership'
 
 interface AuthContextValue {
   user: User | null
@@ -27,16 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     const supabase = getSupabase()
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s)
       setUser(s?.user ?? null)
       setApiAccessToken(s?.access_token ?? null)
+      if (s?.user) await ensureSiteMembership()
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s)
       setUser(s?.user ?? null)
       setApiAccessToken(s?.access_token ?? null)
+      if (s?.user) await ensureSiteMembership()
       setLoading(false)
     })
     return () => subscription.unsubscribe()
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await getSupabase().auth.signInWithPassword({ email, password })
+      if (!error) await ensureSiteMembership()
       return { error: error?.message ?? null }
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Erreur de connexion' }

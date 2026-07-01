@@ -5,10 +5,11 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? '',
   supabaseUrl: process.env.SUPABASE_URL ?? '',
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? '',
-  corsOrigins: (process.env.CORS_ORIGINS ?? '*')
+  corsOrigins: (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((s) => s.trim())
-    .filter(Boolean),
+    .filter(Boolean)
+    .concat(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
   defaultSite: process.env.DEFAULT_SITE ?? 'Site principal',
 }
 
