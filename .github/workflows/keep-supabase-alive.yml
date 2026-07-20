@@ -1,0 +1,40 @@
+# Keep-alive Supabase (plan Free)
+# Empêche la pause automatique après ~7 jours sans activité API.
+# Docs : https://supabase.com/docs/guides/platform/free-project-pausing
+
+name: Keep Supabase alive
+
+on:
+  schedule:
+    # Lundi, mercredi, vendredi à 08:00 UTC
+    - cron: "0 8 * * 1,3,5"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping REST (axes)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Secrets SUPABASE_URL / SUPABASE_ANON_KEY manquants."
+            echo "Repo → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/rest/v1/axes?select=id&limit=1"
+          CODE=$(curl -sS -o /tmp/supabase-ping.json -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Accept: application/json" \
+            "$URL")
+          echo "HTTP $CODE"
+          cat /tmp/supabase-ping.json
+          # 200 = OK ; 401/403 = projet actif mais RLS/clé (compte quand même comme activité API)
+          case "$CODE" in
+            200|401|403) echo "Keep-alive OK" ;;
+            *) echo "Keep-alive échoué" ; exit 1 ;;
+          esac

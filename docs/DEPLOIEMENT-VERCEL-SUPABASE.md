@@ -82,6 +82,23 @@ Supabase → **Authentication** → **URL Configuration** :
 | `/login` | Connexion |
 | `/app/*` | **Application** (login requis) |
 
+## Keep-alive (plan Free)
+
+Supabase **pause** les projets Free après ~7 jours sans activité API.
+Ce dépôt inclut un workflow GitHub Actions (`.github/workflows/keep-supabase-alive.yml`)
+qui ping la table `axes` **3 fois par semaine**.
+
+À configurer une fois dans GitHub → **Settings → Secrets and variables → Actions** :
+
+| Secret | Valeur |
+|--------|--------|
+| `SUPABASE_URL` | Project URL (identique à `VITE_SUPABASE_URL`) |
+| `SUPABASE_ANON_KEY` | clé `anon` (identique à `VITE_SUPABASE_ANON_KEY`) |
+
+Puis **Actions → Keep Supabase alive → Run workflow** pour tester.
+
+Alternative payante : passer en **Pro** (pas de pause automatique).
+
 ---
 
 ## Étape 3 — Tester
