@@ -34,3 +34,4 @@ playwright-report/
 sqcdp-api/node_modules
 sqcdp-api/dist
 sqcdp-api/.env
+.env*
