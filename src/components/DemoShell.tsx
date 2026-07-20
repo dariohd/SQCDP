@@ -25,7 +25,11 @@ export function DemoShell() {
         window.dispatchEvent(new CustomEvent('sqcdp-demo-ready'))
         setReady(true)
       })
-      .catch(() => setReady(true))
+      .catch((err) => {
+        console.error('[SQCDP] Démo non chargée', err)
+        toast.error('Impossible de charger les données de démonstration')
+        setReady(true)
+      })
 
     return () => {
       setDemoMode(false)

@@ -6,6 +6,7 @@ import { filterActionsForEquipe } from '../lib/filters'
 import { getCurrentMonthYearKey } from '../lib/utils'
 import { getCurrentEquipe, setEquipe as saveEquipe } from '../lib/team'
 import { isDemoMode, DEMO_MONTH_KEY } from '../lib/demoMode'
+import { useToast } from './ToastContext'
 
 interface AppContextValue {
   axes: Axe[]
@@ -34,6 +35,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const toast = useToast()
   const [axes, setAxes] = useState<Axe[]>([])
   const [colors, setColors] = useState<StateColors>(DEFAULT_COLORS)
   const [labels, setLabels] = useState<StateLabels>(DEFAULT_LABELS)
@@ -125,6 +127,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
   }, [syncPending])
+
+  useEffect(() => {
+    const onQueued = () => toast.warning('Hors ligne ou erreur cloud — modification mise en file')
+    const onFailed = () => toast.error('Synchronisation définitivement échouée — voir la barre de statut')
+    const onFallback = () => toast.warning('Lecture cloud échouée — affichage du cache local')
+    window.addEventListener('sqcdp-sync-queued', onQueued)
+    window.addEventListener('sqcdp-sync-failed', onFailed)
+    window.addEventListener('sqcdp-cloud-fallback', onFallback)
+    return () => {
+      window.removeEventListener('sqcdp-sync-queued', onQueued)
+      window.removeEventListener('sqcdp-sync-failed', onFailed)
+      window.removeEventListener('sqcdp-cloud-fallback', onFallback)
+    }
+  }, [toast])
 
   const updateColors = useCallback((c: StateColors) => {
     setColors(c)

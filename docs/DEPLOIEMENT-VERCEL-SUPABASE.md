@@ -21,14 +21,24 @@ Plus besoin de Render ni d’API Express pour le fonctionnement normal.
 1. Supabase → **SQL Editor** → **New query**
 2. Collez le contenu de `supabase/migrations/001_schema.sql` → **Run**
 3. Collez le contenu de `supabase/migrations/002_rls.sql` → **Run**
+4. Collez le contenu de `supabase/migrations/003_site_members_rls.sql` → **Run** (**obligatoire** : isolation multi-site)
+5. Collez le contenu de `supabase/migrations/004_site_invites.sql` → **Run** (invitations membres + durcissement)
 
-Cela crée : sites, équipes, axes, états, actions, commentaires, daily reports + sécurité RLS.
+Sans **003**, tout utilisateur authentifié peut lire/écrire toutes les données.
+Sans **004**, impossible d'inviter un collègue depuis l'UI (Paramètres > Membres).
+
+Cela crée : sites, équipes, axes, états, actions, commentaires, daily reports, `site_members`, RLS et RPC d'invitation.
 
 ### Créer les utilisateurs
 
 1. Supabase → **Authentication** → **Users** → **Add user**
-2. Créez un compte par animateur / pilote (email + mot de passe)
-3. Les utilisateurs doivent être connectés pour lire/écrire (RLS)
+2. Créez le **premier** compte (il devient admin du site au premier accès si le site n'a pas encore de membres)
+3. Pour les suivants : créez le user Auth, puis dans l'app **Paramètres > Membres** invitez son email (admin requis)
+
+### Mot de passe oublié
+
+Sur `/login`, le lien « Mot de passe oublié » utilise `resetPasswordForEmail` Supabase.
+Vérifiez que **Site URL** / **Redirect URLs** incluent votre domaine Vercel.
 
 ### Récupérer les clés
 
@@ -133,8 +143,10 @@ Montée en charge (~25 €/mois) : Supabase Pro + Vercel Pro si besoin.
 | Problème | Solution |
 |----------|----------|
 | « Configuration Supabase manquante » | Variables Vercel + redéployer |
-| Erreur RLS / permission denied | Utilisateur non connecté, ou migrations 002 non exécutées |
-| Données vides | Vérifier équipe = Ligne 1 (paramètres) |
+| Erreur RLS / permission denied | Utilisateur non connecté, ou migrations **002/003/004** non exécutées |
+| Accès site refusé / bandeau membership | Admin doit inviter l'email (Paramètres > Membres) après création Auth |
+| Données vides | Vérifier équipe = Ligne 1 (paramètres) et membership site |
+| Sync échouée (barre rouge) | Réessayer ; sinon Ignorer puis ressaisir |
 | Login boucle | Vérifier Redirect URLs dans Supabase |
 
 ---

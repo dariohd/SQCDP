@@ -26,9 +26,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,ico,png,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/sqcdp-api\.onrender\.com\/.*/i,
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
-            options: { cacheName: 'sqcdp-api', networkTimeoutSeconds: 10 },
+            options: { cacheName: 'sqcdp-supabase', networkTimeoutSeconds: 8 },
           },
         ],
       },

@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 import { Button } from './ui/Button'
 import { SyncStatusBar } from './SyncStatusBar'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 import { APP_ROUTES, DEMO_ROUTES, ROUTES } from '../lib/routes'
 import { isDemoMode } from '../lib/demoMode'
 
@@ -42,12 +43,18 @@ export function AppLayout({ children, actions, notifCount = 0, onNotifClick }: A
   const loc = useLocation()
   const navRoutes = useNavRoutes()
   const { equipe, apiSlow, apiConnected, syncing, syncPending } = useApp()
+  const { membershipError } = useAuth()
   const inDemo = isDemoMode()
 
   return (
     <div className="min-h-screen pb-12">
       {!inDemo && (
         <SyncStatusBar apiSlow={apiSlow} apiConnected={apiConnected} syncing={syncing} onRetrySync={() => syncPending()} />
+      )}
+      {!inDemo && membershipError && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900" role="status">
+          {membershipError}
+        </div>
       )}
       <header className="sticky top-0 z-40 border-b border-white/50 bg-white/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3 px-4 py-3">

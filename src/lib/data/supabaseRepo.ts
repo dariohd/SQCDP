@@ -143,13 +143,14 @@ function actionToRow(action: Action, equipeId: string) {
 
 export const supabaseData = {
   async loadOrganisation(): Promise<Organisation> {
-    const site = getSettings().site
-    await ensureDefaultEquipes(site)
+    const preferred = getSettings().site
+    await ensureDefaultEquipes(preferred)
     const sb = getSupabase()
 
     const { data: sites } = await sb.from('sites').select('id, name').order('name')
-    const siteName = sites?.[0]?.name ?? site
-    const siteId = sites?.[0]?.id ?? (await ensureSite(site))
+    const match = sites?.find((s) => s.name === preferred)
+    const siteName = match?.name ?? preferred
+    const siteId = match?.id ?? (await ensureSite(preferred))
 
     const { data: equipes } = await sb
       .from('equipes')

@@ -15,7 +15,9 @@ Deux niveaux d'isolation existent dans le schéma (`database/schema.sql`, `supab
 Un utilisateur devient membre d'un site via la table `site_members` (voir
 `supabase/migrations/003_site_members_rls.sql`). Le premier utilisateur à rejoindre un site vide
 en devient automatiquement `admin` (fonction `ensure_site_membership`) ; un site déjà peuplé
-ne permet plus l'auto-adhésion (il faut une invitation manuelle, non implémentée côté UI).
+ne permet plus l'auto-adhésion : un **admin** invite via **Paramètres > Membres**
+(RPC `invite_site_member`, migration `004_site_invites.sql`). L'utilisateur doit déjà
+exister dans Supabase Authentication.
 
 ## Frontière d'isolation réelle : Supabase RLS
 
@@ -37,10 +39,9 @@ Si `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` sont absentes (poste de dev sa
 sans secret) :
 
 - `isSupabaseConfigured()` renvoie `false`.
-- `ProtectedRoute` (voir `src/App.tsx`) **laisse passer tout le monde** sur `/app/*` sans
-  connexion : c'est un choix délibéré pour permettre un mode local mono-poste (données dans
-  `localStorage` uniquement, cf. `docs/ARCHITECTURE.md`), mais cela veut dire qu'il n'y a alors
-  **aucune** frontière d'auth ni de site à cette étape.
+- `ProtectedRoute` (voir `src/App.tsx`) **laisse passer** sur `/app/*` sans connexion en
+  localhost (mode local mono-poste). Sur un **hôte déployé** (ex. Vercel) sans variables
+  Supabase, l'app affiche un écran de blocage volontaire pour éviter un mode ouvert en prod.
 - Le filtrage reste actif à l'échelle de l'équipe uniquement : `getCurrentEquipe()`
   (`src/lib/team.ts`, valeur stockée dans `localStorage`) sert de clé de filtrage dans
   `filterActionsForEquipe` / `mergeActions` / `mergeComments` / `getLocalDayStates`.

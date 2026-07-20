@@ -8,7 +8,7 @@ Suite **SQCDP** (Sécurité, Qualité, Coût, Délai, Personnel) pour le pilotag
 | **Dépôt** | [github.com/dariohd/SQCDP](https://github.com/dariohd/SQCDP) |
 
 Ce dépôt regroupe l'application React (racine), un schéma SQL Supabase (`supabase/`, `database/`)
-et une ancienne API Express (`sqcdp-api/`) conservée pour référence mais non utilisée en production.
+et une ancienne API Express (`sqcdp-api/`, voir `sqcdp-api/ARCHIVED.md`) non utilisée en production.
 
 ## Backend de référence : Supabase
 

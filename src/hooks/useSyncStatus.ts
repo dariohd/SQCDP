@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { getPendingSyncCount } from '../lib/syncQueue'
+import { getFailedSyncCount, getPendingSyncCount } from '../lib/syncQueue'
 
 export function useSyncStatus() {
   const [online, setOnline] = useState(navigator.onLine)
   const [pending, setPending] = useState(getPendingSyncCount)
+  const [failed, setFailed] = useState(getFailedSyncCount)
 
   useEffect(() => {
-    const refresh = () => setPending(getPendingSyncCount())
+    const refresh = () => {
+      setPending(getPendingSyncCount())
+      setFailed(getFailedSyncCount())
+    }
     const onOnline = () => { setOnline(true); refresh() }
     const onOffline = () => setOnline(false)
 
@@ -21,5 +25,5 @@ export function useSyncStatus() {
     }
   }, [])
 
-  return { online, pending }
+  return { online, pending, failed }
 }

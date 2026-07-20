@@ -16,6 +16,8 @@ import {
 import {
   addLocalAction,
   addLocalComment,
+  getLocalActions,
+  getLocalDayStates,
   mergeActions,
   mergeComments,
   mergeDayStates,
@@ -30,7 +32,7 @@ import {
   mergeOrganisation,
   saveLocalOrganisation,
 } from './organisation'
-import { enqueueSync, readQueue, writeQueue, MAX_JOB_ATTEMPTS, type SyncJob } from './syncQueue'
+import { enqueueSync, readQueue, writeQueue, MAX_JOB_ATTEMPTS, markSyncJobFailed, type SyncJob } from './syncQueue'
 import { getCurrentEquipe, getSettings } from './team'
 import { isDemoMode } from './demoMode'
 import { notifyDemoReadOnly } from './demoToast'
@@ -54,6 +56,10 @@ export { initDemoStore, clearDemoStore, isDemoStoreReady }
 export { checkRemoteHealth as checkApiHealth, isRemoteHealthy }
 export function wasLastApiSlow() {
   return false
+}
+
+function notifyCloudFallback(context: string) {
+  window.dispatchEvent(new CustomEvent('sqcdp-cloud-fallback', { detail: { context } }))
 }
 
 class ApiCache {
@@ -144,7 +150,7 @@ export async function processSyncQueue(): Promise<number> {
       if (attempts < MAX_JOB_ATTEMPTS) {
         remaining.push({ ...job, attempts })
       } else {
-        console.error('[SQCDP] Job abandonné après', MAX_JOB_ATTEMPTS, 'tentatives', job.id)
+        markSyncJobFailed(job, err)
       }
     }
   }
@@ -181,7 +187,7 @@ export const api = {
         cache.set('organisation', merged)
         return merged
       } catch {
-        /* fallback local */
+        notifyCloudFallback('organisation')
       }
     }
 
@@ -337,19 +343,25 @@ export const api = {
     }
 
     let remoteStates: DayState[] = []
+    let remoteOk = false
     if (useCloud()) {
       try {
         remoteStates = await supabaseData.loadDayStates(equipe, axeId)
+        remoteOk = true
       } catch {
-        remoteStates = []
+        notifyCloudFallback('dayStates')
+        remoteOk = false
       }
     }
 
-    const merged = useRemoteAsSource()
-      ? remoteStates
-      : axeId
-        ? mergeDayStates(remoteStates, axeId, equipe)
-        : remoteStates
+    const merged =
+      remoteOk && useRemoteAsSource()
+        ? remoteStates
+        : axeId
+          ? mergeDayStates(remoteStates, axeId, equipe)
+          : remoteOk
+            ? remoteStates
+            : getLocalDayStates(undefined, equipe)
 
     cache.set(key, merged)
     return merged
@@ -397,15 +409,18 @@ export const api = {
     }
 
     let remoteActions: Action[] = []
+    let remoteOk = false
     if (useCloud()) {
       try {
         remoteActions = await supabaseData.loadActions(equipe)
+        remoteOk = true
       } catch {
-        remoteActions = []
+        notifyCloudFallback('actions')
+        remoteOk = false
       }
     }
 
-    const merged = useRemoteAsSource() ? remoteActions : mergeActions(remoteActions, equipe)
+    const merged = remoteOk && useRemoteAsSource() ? remoteActions : mergeActions(remoteActions, equipe)
     cache.set(key, merged)
     return merged
   },
@@ -416,8 +431,16 @@ export const api = {
       if (!action) throw new Error('Action introuvable')
       return action
     }
-    if (useCloud()) return supabaseData.getAction(id)
-    throw new Error('Action introuvable')
+    if (useCloud()) {
+      try {
+        return await supabaseData.getAction(id)
+      } catch {
+        notifyCloudFallback('action')
+      }
+    }
+    const local = getLocalActions().find((a) => a.id === id)
+    if (!local) throw new Error('Action introuvable')
+    return local
   },
 
   async saveAction(action: Action): Promise<Action> {
@@ -473,15 +496,18 @@ export const api = {
     }
 
     let remoteComments: Comment[] = []
+    let remoteOk = false
     if (useCloud()) {
       try {
         remoteComments = await supabaseData.loadCommentaires(equipe)
+        remoteOk = true
       } catch {
-        remoteComments = []
+        notifyCloudFallback('comments')
+        remoteOk = false
       }
     }
 
-    const merged = useRemoteAsSource() ? remoteComments : mergeComments(remoteComments, equipe)
+    const merged = remoteOk && useRemoteAsSource() ? remoteComments : mergeComments(remoteComments, equipe)
     cache.set(key, merged)
     return merged
   },

@@ -7,12 +7,14 @@ import { Button } from '../components/ui/Button'
 import { APP_ROUTES, ROUTES } from '../lib/routes'
 
 export function LoginPage() {
-  const { signIn, isConfigured, user } = useAuth()
+  const { signIn, resetPassword, isConfigured, user } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     if (user) navigate(APP_ROUTES.home, { replace: true })
@@ -21,11 +23,26 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setInfo('')
     setLoading(true)
     const { error: err } = await signIn(email, password)
     if (err) setError(err)
     else navigate(APP_ROUTES.home, { replace: true })
     setLoading(false)
+  }
+
+  const handleReset = async () => {
+    setError('')
+    setInfo('')
+    if (!email.trim()) {
+      setError('Saisissez votre email pour réinitialiser le mot de passe.')
+      return
+    }
+    setResetting(true)
+    const { error: err } = await resetPassword(email)
+    if (err) setError(err)
+    else setInfo('Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.')
+    setResetting(false)
   }
 
   if (!isConfigured) {
@@ -68,10 +85,11 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon`}
 
         <form onSubmit={handleSubmit} className="space-y-5 p-8">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-600">Email</label>
+            <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-slate-600">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -85,10 +103,11 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon`}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-600">Mot de passe</label>
+            <label htmlFor="login-password" className="mb-1.5 block text-sm font-medium text-slate-600">Mot de passe</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -105,14 +124,29 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon`}
               className="rounded-lg bg-red-50 px-3 py-2 text-sm text-error"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              role="alert"
             >
               {error}
             </motion.p>
+          )}
+          {info && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">
+              {info}
+            </p>
           )}
 
           <Button type="submit" className="w-full !py-3" loading={loading}>
             Se connecter
           </Button>
+
+          <button
+            type="button"
+            onClick={() => void handleReset()}
+            disabled={resetting}
+            className="w-full text-center text-xs font-medium text-primary hover:underline disabled:opacity-50"
+          >
+            {resetting ? 'Envoi…' : 'Mot de passe oublié ?'}
+          </button>
         </form>
 
         <p className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">

@@ -3,11 +3,10 @@ import { APP_ROUTES } from '../src/lib/routes'
 
 /**
  * Ces tests couvrent l'isolation par équipe côté client (`getCurrentEquipe` /
- * `filterActionsForEquipe`), le même principe qui, une fois Supabase configuré,
- * est appliqué par les policies RLS sur `equipe_id` (voir supabase/migrations/002_rls.sql
- * et 003_site_members_rls.sql). Sans base Supabase de test provisionnée en CI, on ne peut
- * pas exercer l'isolation RLS réelle entre sites : voir docs/MULTI_TENANT.md pour le détail
- * des angles morts et pour ce que ces tests couvrent réellement.
+ * `filterActionsForEquipe`). En production Supabase, l'isolation multi-tenant
+ * réelle est par **site** (`site_id` / `site_members`, migrations 003 + 004) ;
+ * le filtre équipe reste un filtre applicatif. Sans projet Supabase de test en CI,
+ * on ne peut pas exercer les policies RLS ici : voir docs/MULTI_TENANT.md.
  */
 
 test.describe('Isolation des données par équipe (mode local, sans backend)', () => {
