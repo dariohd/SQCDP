@@ -87,16 +87,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <h3 className="mb-3 font-semibold text-slate-700">Équipe & site</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500">Équipe active</label>
-              <select value={equipe} onChange={(e) => setEquipe(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+              <label htmlFor="settings-equipe" className="mb-1 block text-xs text-slate-500">Équipe active</label>
+              <select id="settings-equipe" value={equipe} onChange={(e) => setEquipe(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
                 {equipeNames.map((eq) => (
                   <option key={eq} value={eq}>{eq}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500">Site</label>
-              <input value={site} onChange={(e) => setSite(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              <label htmlFor="settings-site" className="mb-1 block text-xs text-slate-500">Site</label>
+              <input id="settings-site" value={site} onChange={(e) => setSite(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
             </div>
           </div>
           <div className="mt-3 flex gap-2">

@@ -1,4 +1,11 @@
-# Mise en ligne — BDD persistante accessible partout
+# Mise en ligne — BDD persistante accessible partout (ancienne stack, non utilisée)
+
+> **Doc obsolète.** Ce guide décrit la stack Render (API Express + PostgreSQL) via
+> `VITE_API_BASE_URL`. Le frontend actuel (`src/`) n'appelle plus cette API : il parle
+> directement à Supabase (voir [DEPLOIEMENT-VERCEL-SUPABASE.md](./DEPLOIEMENT-VERCEL-SUPABASE.md),
+> le guide à suivre pour un nouveau déploiement). Ce fichier est conservé pour référence sur
+> l'ancienne architecture (`sqcdp-api/`) ; voir aussi [MULTI_TENANT.md](./MULTI_TENANT.md) pour
+> le modèle d'isolation réellement en vigueur.
 
 Ce guide configure une **base PostgreSQL hébergée** + une **API en ligne** + le **frontend Vercel**.  
 Toutes les saisies sont stockées en base : accessibles depuis n’importe quel PC via l’URL du site.

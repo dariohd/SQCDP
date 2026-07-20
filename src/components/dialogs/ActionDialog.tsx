@@ -181,8 +181,9 @@ export function ActionDialog({ open, onClose, axe, actionId, defaultDate, onSave
             <div className="grid gap-4 sm:grid-cols-2">
               {generalFields.map((f) => (
                 <div key={f.key} className={f.key === 'probleme' ? 'sm:col-span-2' : ''}>
-                  <label className="mb-1 block text-sm font-medium text-slate-600">{f.label}{f.required && ' *'}</label>
+                  <label htmlFor={`action-field-${f.key}`} className="mb-1 block text-sm font-medium text-slate-600">{f.label}{f.required && ' *'}</label>
                   <input
+                    id={`action-field-${f.key}`}
                     type={f.type ?? 'text'}
                     value={(action[f.key] as string) ?? ''}
                     onChange={(e) => update(f.key, e.target.value)}

@@ -1,4 +1,10 @@
-# Créer et connecter la base de données SQCDP
+# Créer et connecter la base de données SQCDP (ancienne stack, non utilisée)
+
+> **Doc obsolète.** Ce guide décrit la stack `sqcdp-api` (Express + PostgreSQL, `VITE_API_BASE_URL`),
+> que le frontend actuel n'appelle plus. Pour créer la base réellement utilisée en production,
+> voir [DEPLOIEMENT-VERCEL-SUPABASE.md](./DEPLOIEMENT-VERCEL-SUPABASE.md) (migrations SQL dans
+> `supabase/migrations/`). Ce fichier reste ici pour référence sur l'ancienne architecture ; voir
+> aussi [MULTI_TENANT.md](./MULTI_TENANT.md) pour le modèle d'isolation réellement en vigueur.
 
 Ce guide explique comment créer une base PostgreSQL, l’initialiser avec le schéma SQCDP, la relier à l’API et au frontend, puis charger des **données fictives** pour tester ou faire une démo.
 

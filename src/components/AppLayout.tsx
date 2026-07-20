@@ -77,7 +77,7 @@ export function AppLayout({ children, actions, notifCount = 0, onNotifClick }: A
             )}
           </nav>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <span data-testid="active-equipe" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {equipe}
             </span>
             {actions}

@@ -130,7 +130,7 @@ export function DashboardPage() {
                 <Download size={14} />
                 CSV
               </Button>
-              <Button variant="secondary" className="!px-3 !py-2 text-xs" onClick={() => setShowSettings(true)}>
+              <Button variant="secondary" aria-label="Paramètres" className="!px-3 !py-2 text-xs" onClick={() => setShowSettings(true)}>
                 <Settings size={14} />
               </Button>
             </>
